@@ -35,7 +35,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ name
       // Find all matches of {{number}}
       const matches = d.body_text?.match(/\{\{\d+\}\}/g) || []
       // Find unique numbers
-      const uniqueVariables = new Set(matches.map(m => m.replace(/[{}]/g, '')))
+      const uniqueVariables = new Set(matches.map((m: string) => m.replace(/[{}]/g, '')))
       
       return {
         language: d.language,

@@ -36,7 +36,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       request_body: null,
       response_status: 200,
       ip_address: ip
-    }).catch(e => console.warn('[agent/notifications/[id]/ack] audit log failed:', e))
+    }).then(({ error }) => { if (error) console.warn('[agent/notifications/[id]/ack] audit log failed:', error) })
 
     return NextResponse.json({ acknowledged: true, id })
   } catch (err) {

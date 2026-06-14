@@ -5,12 +5,15 @@ export interface AgentAuthSuccess {
   scopes: string[]        // Array of permission strings
   rateLimitRequests: number
   rateLimitWindowSeconds: number
+  error?: undefined
+  status?: undefined
 }
 
 // Failed auth result
 export interface AgentAuthError {
   error: string           // Human-readable error message
   status: number          // HTTP status code (401 or 403)
+  userId?: undefined
 }
 
 // Union type returned by authenticateAgent

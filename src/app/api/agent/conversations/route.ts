@@ -95,7 +95,7 @@ export async function GET(request: Request) {
     let latestCustomerMsgMap: Record<string, string> = {}
     
     if (conversations && conversations.length > 0) {
-      const convIds = conversations.map(c => c.id)
+      const convIds = (conversations as any[]).map(c => c.id)
       const { data: customerMsgs, error: msgError } = await supabase
         .from('messages')
         .select('conversation_id, created_at')
@@ -113,7 +113,7 @@ export async function GET(request: Request) {
     }
 
     const now = new Date()
-    const formattedData = conversations?.map(conv => {
+    const formattedData = (conversations as any[])?.map(conv => {
       const messageWindow: any = {
         is_open: false,
         expires_at: null,

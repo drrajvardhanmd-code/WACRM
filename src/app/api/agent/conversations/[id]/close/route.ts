@@ -73,7 +73,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       request_body: null,
       response_status: 200,
       ip_address: ip
-    }).catch(e => console.warn('[agent/conversations/[id]/close] audit log failed:', e))
+    }).then(({ error }) => { if (error) console.warn('[agent/conversations/[id]/close] audit log failed:', error) })
 
     return NextResponse.json({ closed: true, id, closed_at: now })
   } catch (err) {

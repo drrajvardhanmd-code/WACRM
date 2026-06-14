@@ -21,7 +21,7 @@ export async function notifyNewMessage(params: {
       message_text: params.messageText,
       message_type: params.messageType
     }
-  }).catch(e => console.error('[notifyNewMessage] failed', e))
+  }).then(({ error }) => { if (error) console.error('[notifyNewMessage] failed', error) })
 }
 
 export async function notifyNewContact(params: {
@@ -39,7 +39,7 @@ export async function notifyNewContact(params: {
       contact_name: params.contactName,
       contact_phone: params.contactPhone
     }
-  }).catch(e => console.error('[notifyNewContact] failed', e))
+  }).then(({ error }) => { if (error) console.error('[notifyNewContact] failed', error) })
 }
 
 export async function notifyDealUpdate(params: {
@@ -59,5 +59,5 @@ export async function notifyDealUpdate(params: {
       old_stage: params.oldStage,
       new_stage: params.newStage
     }
-  }).catch(e => console.error('[notifyDealUpdate] failed', e))
+  }).then(({ error }) => { if (error) console.error('[notifyDealUpdate] failed', error) })
 }
