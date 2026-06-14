@@ -125,7 +125,20 @@ export const RATE_LIMITS = {
    *  fidget with reactions and a single "swap" is actually two calls
    *  (remove + add) under the hood. */
   react: { limit: 120, windowMs: 60_000 },
+  /** Agent API calls. 200/min per key — default fallback rate limit */
+  agent: { limit: 200, windowMs: 60_000 },
 } as const;
+
+export function checkAgentRateLimit(
+  apiKeyId: string, 
+  limit: number, 
+  windowSeconds: number
+): RateLimitResult {
+  return checkRateLimit(`agent:${apiKeyId}`, { 
+    limit, 
+    windowMs: windowSeconds * 1000 
+  })
+}
 
 /** Test-only helper. Clears the in-memory state so unit tests don't
  *  leak buckets across files. Not wired up in production code. */

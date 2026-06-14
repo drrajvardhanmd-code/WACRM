@@ -10,6 +10,7 @@ import {
   handleTemplateWebhookChange,
   isTemplateWebhookField,
 } from '@/lib/whatsapp/template-webhook'
+import { notifyNewMessage } from '@/lib/agent/notify'
 
 // Lazy-initialized to avoid build-time crash when env vars are missing
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -611,6 +612,17 @@ async function processMessage(
   if (convError) {
     console.error('Error updating conversation:', convError)
   }
+
+  // Notify agent if applicable
+  notifyNewMessage({
+    userId,
+    conversationId: conversation.id,
+    contactId: contactRecord.id,
+    contactName: contactName,
+    contactPhone: senderPhone,
+    messageText: contentText ?? '',
+    messageType: message.type,
+  })
 
   // If this contact was a recent broadcast recipient, flag the reply
   // so the broadcast's `replied_count` advances (via the aggregate
