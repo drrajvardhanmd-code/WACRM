@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Settings, MessageSquare, Tag, User, Palette } from 'lucide-react';
+import { Settings, MessageSquare, Tag, User, Palette, Webhook } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { WhatsAppConfig } from '@/components/settings/whatsapp-config';
 import { TemplateManager } from '@/components/settings/template-manager';
@@ -10,12 +10,14 @@ import { ProfileForm } from '@/components/settings/profile-form';
 import { PasswordForm } from '@/components/settings/password-form';
 import { SessionsCard } from '@/components/settings/sessions-card';
 import { AppearancePanel } from '@/components/settings/appearance-panel';
+import { N8nIntegrationPanel } from '@/components/settings/n8n-integration';
 
 const TAB_VALUES = [
   'profile',
   'whatsapp',
   'templates',
   'tags',
+  'integrations',
   'appearance',
 ] as const;
 type TabValue = (typeof TAB_VALUES)[number];
@@ -57,35 +59,42 @@ export default function SettingsPage() {
             value="profile"
             className="data-active:bg-slate-800 data-active:text-primary text-slate-400"
           >
-            <User className="size-4" />
+            <User className="size-4 mr-2" />
             Profile
           </TabsTrigger>
           <TabsTrigger
             value="whatsapp"
             className="data-active:bg-slate-800 data-active:text-primary text-slate-400"
           >
-            <Settings className="size-4" />
+            <Settings className="size-4 mr-2" />
             WhatsApp Config
           </TabsTrigger>
           <TabsTrigger
             value="templates"
             className="data-active:bg-slate-800 data-active:text-primary text-slate-400"
           >
-            <MessageSquare className="size-4" />
+            <MessageSquare className="size-4 mr-2" />
             Templates
           </TabsTrigger>
           <TabsTrigger
             value="tags"
             className="data-active:bg-slate-800 data-active:text-primary text-slate-400"
           >
-            <Tag className="size-4" />
+            <Tag className="size-4 mr-2" />
             Tags
+          </TabsTrigger>
+          <TabsTrigger
+            value="integrations"
+            className="data-active:bg-slate-800 data-active:text-primary text-slate-400"
+          >
+            <Webhook className="size-4 mr-2" />
+            Integrations
           </TabsTrigger>
           <TabsTrigger
             value="appearance"
             className="data-active:bg-slate-800 data-active:text-primary text-slate-400"
           >
-            <Palette className="size-4" />
+            <Palette className="size-4 mr-2" />
             Appearance
           </TabsTrigger>
         </TabsList>
@@ -106,6 +115,10 @@ export default function SettingsPage() {
 
         <TabsContent value="tags">
           <TagManager />
+        </TabsContent>
+
+        <TabsContent value="integrations">
+          <N8nIntegrationPanel />
         </TabsContent>
 
         <TabsContent value="appearance">
