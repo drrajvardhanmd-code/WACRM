@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { toast } from 'sonner';
 import { CustomField, Tag } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,6 +38,50 @@ interface Step2Props {
   onUpdate: (audience: AudienceConfig) => void;
   onNext: () => void;
   onBack: () => void;
+}
+
+function parseCSV(text: string) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+
+  const headerLine = lines[0];
+  const headers = headerLine.split(',').map((h) => h.trim().toLowerCase().replace(/["']/g, ''));
+
+  const phoneIdx = headers.indexOf('phone');
+  if (phoneIdx === -1) return [];
+
+  const nameIdx = headers.indexOf('name');
+
+  const rows: { phone: string; name?: string }[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    const values: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (const char of line) {
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        values.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    values.push(current.trim());
+
+    const phone = values[phoneIdx]?.replace(/["']/g, '').trim();
+    if (!phone) continue;
+
+    rows.push({
+      phone,
+      name: nameIdx >= 0 ? values[nameIdx]?.replace(/["']/g, '').trim() || undefined : undefined,
+    });
+  }
+
+  return rows;
 }
 
 const audienceOptions: {
@@ -89,6 +134,25 @@ export function Step2SelectAudience({
   const [loadingFields, setLoadingFields] = useState(false);
   const [estimatedCount, setEstimatedCount] = useState<number | null>(null);
   const [loadingCount, setLoadingCount] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = e.target.files?.[0];
+    if (!selected) return;
+
+    const text = await selected.text();
+    const rows = parseCSV(text);
+
+    if (rows.length === 0) {
+      toast.error('No valid rows found. Ensure CSV has a "phone" column header.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    onUpdate({ ...audience, csvContacts: rows });
+    toast.success(`Loaded ${rows.length} contacts from CSV.`);
+  }
 
   // Tags are used both by the primary "Filter by Tags" audience type
   // AND by the exclude-list below — so always load once on mount.
@@ -386,6 +450,41 @@ export function Step2SelectAudience({
               />
             </div>
           )}
+        </div>
+      )}
+
+      {audience.type === 'csv' && (
+        <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+          <p className="text-sm font-medium text-white">Upload CSV</p>
+          <div className="flex flex-col gap-3">
+            <p className="text-xs text-slate-400">
+              Upload a CSV file containing at least a <code className="rounded bg-slate-800 px-1 py-0.5">phone</code> column. 
+              An optional <code className="rounded bg-slate-800 px-1 py-0.5">name</code> column is also supported.
+            </p>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Select CSV File
+              </Button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".csv,text/csv"
+                className="hidden"
+              />
+              {audience.csvContacts && audience.csvContacts.length > 0 && (
+                <span className="text-sm text-emerald-400">
+                  {audience.csvContacts.length} contacts loaded
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
