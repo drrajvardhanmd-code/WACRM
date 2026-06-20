@@ -58,53 +58,26 @@ export function validateTemplateName(name: string): void {
 }
 
 /**
- * Extract sorted, deduplicated {{N}} indices from a string. Returns
- * `[1, 2, 4]` for `"Hi {{1}} {{2}}, item {{4}}"`.
+ * Extract deduplicated {{var_name}} variables from a string.
  */
-export function extractVariableIndices(text: string): number[] {
-  const invalidMatches = [...text.matchAll(/\{\{([^}\d]+)\}\}/g)];
-  if (invalidMatches.length > 0) {
-    const invalidVars = invalidMatches.map((m) => `{{${m[1]}}}`).join(', ');
-    throw new Error(
-      `Invalid variable format found: ${invalidVars}. Meta WhatsApp API strictly requires numeric variables like {{1}}, {{2}}, etc.`,
-    );
-  }
-
-  const matches = text.matchAll(/\{\{(\d+)\}\}/g);
-  const set = new Set<number>();
+export function extractVariables(text: string): string[] {
+  const matches = text.matchAll(/\{\{([a-z0-9_]+)\}\}/g);
+  const set = new Set<string>();
   for (const m of matches) {
-    const n = Number(m[1]);
-    if (Number.isFinite(n) && n >= 1) set.add(n);
+    set.add(m[1]);
   }
-  return [...set].sort((a, b) => a - b);
+  return [...set];
 }
 
-/**
- * Meta requires contiguous, 1-indexed variables. `{{1}} {{3}}` is
- * invalid — it must be `{{1}} {{2}}`.
- */
-function assertContiguous(indices: number[], where: string): void {
-  for (let i = 0; i < indices.length; i++) {
-    if (indices[i] !== i + 1) {
-      throw new Error(
-        `${where} variables must be contiguous starting at {{1}} — found ${indices
-          .map((n) => `{{${n}}}`)
-          .join(', ')}.`,
-      );
-    }
-  }
-}
-
-export function validateBody(bodyText: string): number[] {
+export function validateBody(bodyText: string): string[] {
   if (!bodyText.trim()) throw new Error('Body text is required.');
   if (bodyText.length > TEMPLATE_LIMITS.bodyMaxLength) {
     throw new Error(
       `Body text exceeds ${TEMPLATE_LIMITS.bodyMaxLength} chars (got ${bodyText.length}).`,
     );
   }
-  const indices = extractVariableIndices(bodyText);
-  assertContiguous(indices, 'Body');
-  return indices;
+  const variables = extractVariables(bodyText);
+  return variables;
 }
 
 export function validateFooter(footerText: string | undefined): void {
@@ -114,8 +87,8 @@ export function validateFooter(footerText: string | undefined): void {
       `Footer text exceeds ${TEMPLATE_LIMITS.footerMaxLength} chars (got ${footerText.length}).`,
     );
   }
-  if (extractVariableIndices(footerText).length > 0) {
-    throw new Error('Footer text cannot contain {{N}} variables (Meta rule).');
+  if (extractVariables(footerText).length > 0) {
+    throw new Error('Footer text cannot contain {{var}} variables (Meta rule).');
   }
 }
 
@@ -142,16 +115,13 @@ export function validateHeader(
         `Header text exceeds ${TEMPLATE_LIMITS.headerTextMaxLength} chars (got ${header_content.length}).`,
       );
     }
-    const indices = extractVariableIndices(header_content);
-    if (indices.length > 1) {
+    const variables = extractVariables(header_content);
+    if (variables.length > 1) {
       throw new Error(
-        `Text header supports at most one variable — found ${indices.length} (Meta rule).`,
+        `Text header supports at most one variable — found ${variables.length} (Meta rule).`,
       );
     }
-    if (indices.length === 1 && indices[0] !== 1) {
-      throw new Error('Text header variable must be {{1}} (Meta rule).');
-    }
-    return { variableCount: indices.length };
+    return { variableCount: variables.length };
   }
 
   // image / video / document need either a public URL or a Resumable
@@ -248,21 +218,16 @@ export function validateButtons(buttons: TemplateButton[] | undefined): void {
         } catch {
           throw new Error(`URL button #${i + 1} has an invalid url.`);
         }
-        const urlVars = extractVariableIndices(b.url);
+        const urlVars = extractVariables(b.url);
         if (urlVars.length > 1) {
           throw new Error(
             `URL button #${i + 1} can have at most one variable (Meta rule).`,
           );
         }
         if (urlVars.length === 1) {
-          if (urlVars[0] !== 1) {
-            throw new Error(
-              `URL button #${i + 1} variable must be {{1}} (Meta rule).`,
-            );
-          }
           if (!b.example?.trim()) {
             throw new Error(
-              `URL button #${i + 1} uses {{1}} — Meta requires an example value.`,
+              `URL button #${i + 1} uses a variable — Meta requires an example value.`,
             );
           }
         }

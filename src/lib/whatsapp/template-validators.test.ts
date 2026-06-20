@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  extractVariableIndices,
+  extractVariables,
   TEMPLATE_LIMITS,
   validateBody,
   validateButtons,
@@ -19,12 +19,12 @@ const baseValid: TemplatePayload = {
   body_text: 'Your order is confirmed.',
 };
 
-describe('extractVariableIndices', () => {
+describe('extractVariables', () => {
   it('returns sorted unique 1-based indices', () => {
-    expect(extractVariableIndices('Hi {{2}} and {{1}} {{2}}')).toEqual([1, 2]);
+    expect(extractVariables('Hi {{2}} and {{1}} {{2}}')).toEqual(['2', '1']);
   });
   it('returns empty array for no variables', () => {
-    expect(extractVariableIndices('No vars here')).toEqual([]);
+    expect(extractVariables('No vars here')).toEqual([]);
   });
 });
 
@@ -53,11 +53,8 @@ describe('validateBody', () => {
       /exceeds 1024/,
     );
   });
-  it('rejects non-contiguous variables', () => {
-    expect(() => validateBody('Hi {{1}} {{3}}')).toThrow(/contiguous/);
-  });
   it('accepts contiguous variables', () => {
-    expect(validateBody('Hi {{1}} {{2}}')).toEqual([1, 2]);
+    expect(validateBody('Hi {{1}} {{2}}')).toEqual(['1', '2']);
   });
 });
 
@@ -88,11 +85,6 @@ describe('validateHeader', () => {
     expect(() =>
       validateHeader({ header_type: 'text', header_content: '{{1}} {{2}}' }),
     ).toThrow(/at most one variable/);
-  });
-  it('text header requires variable to be {{1}}', () => {
-    expect(() =>
-      validateHeader({ header_type: 'text', header_content: 'Hello {{2}}' }),
-    ).toThrow(/must be \{\{1\}\}/);
   });
   it('image header requires a URL or handle', () => {
     expect(() => validateHeader({ header_type: 'image' })).toThrow(
@@ -187,24 +179,12 @@ describe('validateButtons', () => {
       validateButtons([{ type: 'URL', text: 'Go', url: 'not-a-url' }]),
     ).toThrow(/invalid url/);
   });
-  it('rejects URL with {{1}} but no example', () => {
+  it('rejects URL with variable but no example', () => {
     expect(() =>
       validateButtons([
         { type: 'URL', text: 'Go', url: 'https://x/{{1}}' },
       ]),
     ).toThrow(/Meta requires an example/);
-  });
-  it('rejects URL with non-{{1}} variable', () => {
-    expect(() =>
-      validateButtons([
-        {
-          type: 'URL',
-          text: 'Go',
-          url: 'https://x/{{2}}',
-          example: 'foo',
-        },
-      ]),
-    ).toThrow(/must be \{\{1\}\}/);
   });
   it('rejects PHONE_NUMBER without phone_number', () => {
     expect(() =>

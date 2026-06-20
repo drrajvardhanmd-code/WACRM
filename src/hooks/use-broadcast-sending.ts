@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Contact, MessageTemplate } from '@/types';
+import { extractVariables } from '@/lib/whatsapp/template-validators';
 
 export type CustomFieldOperator = 'is' | 'is_not' | 'contains';
 
@@ -78,20 +79,14 @@ type CustomValueIndex = Map<string, Map<string, string>>;
  */
 export function resolveVariables(
   variables: Record<string, VariableMapping>,
+  orderedVars: string[],
   contact: Contact,
   customValues?: Map<string, string>,
 ): string[] {
-  // Keys are typically "1","2",... — numeric-aware sort keeps
-  // {{1}} before {{10}}.
-  const keys = Object.keys(variables).sort((a, b) => {
-    const an = Number(a);
-    const bn = Number(b);
-    if (Number.isFinite(an) && Number.isFinite(bn)) return an - bn;
-    return a.localeCompare(b);
-  });
-
-  return keys.map((key) => {
+  return orderedVars.map((key) => {
     const v = variables[key];
+    if (!v) return '';
+
     if (v.type === 'static') return v.value;
 
     if (v.type === 'field') {
@@ -101,11 +96,14 @@ export function resolveVariables(
         email: contact.email,
         company: contact.company,
       };
-      return fieldMap[v.value] ?? '';
+      return fieldMap[v.value] || '';
     }
 
-    // custom_field
-    return customValues?.get(v.value) ?? '';
+    if (v.type === 'custom_field') {
+      return customValues?.get(v.value) || '';
+    }
+
+    return '';
   });
 }
 
@@ -424,6 +422,8 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       let failedCount = 0;
       const totalRecipients = recipients.length;
 
+      const orderedVars = extractVariables(payload.template.body_text);
+
       for (let i = 0; i < recipients.length; i += SEND_BATCH_SIZE) {
         const batch = recipients.slice(i, i + SEND_BATCH_SIZE);
 
@@ -434,6 +434,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
             params: r.contact
               ? resolveVariables(
                   payload.variables,
+                  orderedVars,
                   r.contact,
                   customValueIndex.get(r.contact.id),
                 )

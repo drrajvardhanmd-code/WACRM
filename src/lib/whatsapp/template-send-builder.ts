@@ -31,7 +31,7 @@
  */
 
 import type { MessageTemplate, TemplateButton } from '@/types';
-import { extractVariableIndices } from './template-validators';
+import { extractVariables } from './template-validators';
 
 export interface SendTimeParams {
   /** Values for body {{1}}, {{2}}, … indexed by variable position. */
@@ -62,7 +62,7 @@ export type MetaSendComponent =
     };
 
 type MetaSendParameter =
-  | { type: 'text'; text: string }
+  | { type: 'text'; text: string; parameter_name?: string }
   | { type: 'image'; image: { link?: string; id?: string } }
   | { type: 'video'; video: { link?: string; id?: string } }
   | { type: 'document'; document: { link?: string; id?: string } }
@@ -80,17 +80,17 @@ function buildHeaderComponent(
     // TEXT header with {{1}} → need a value. Static text headers
     // (no variables) just ride along inside the template itself; no
     // header component required on send.
-    const varCount = extractVariableIndices(template.header_content ?? '').length;
-    if (varCount === 0) return null;
+    const headerVars = extractVariables(template.header_content ?? '');
+    if (headerVars.length === 0) return null;
     const value = params.headerText;
     if (!value || !value.trim()) {
       throw new Error(
-        'Header text variable {{1}} requires a value — pass headerText.',
+        `Header text variable {{${headerVars[0]}}} requires a value — pass headerText.`,
       );
     }
     return {
       type: 'header',
-      parameters: [{ type: 'text', text: value }],
+      parameters: [{ type: 'text', parameter_name: headerVars[0], text: value }],
     };
   }
 
@@ -121,7 +121,8 @@ function buildBodyComponent(
   template: MessageTemplate,
   params: SendTimeParams,
 ): MetaSendComponent | null {
-  const varCount = extractVariableIndices(template.body_text).length;
+  const bodyVars = extractVariables(template.body_text);
+  const varCount = bodyVars.length;
   const body = params.body ?? [];
   if (varCount === 0 && body.length === 0) return null;
   if (body.length < varCount) {
@@ -134,7 +135,7 @@ function buildBodyComponent(
   const values = body.slice(0, varCount);
   return {
     type: 'body',
-    parameters: values.map((text) => ({ type: 'text', text: String(text) })),
+    parameters: values.map((text, i) => ({ type: 'text', parameter_name: bodyVars[i], text: String(text) })),
   };
 }
 
@@ -144,7 +145,7 @@ function buttonNeedsSendParam(
 ): boolean {
   switch (button.type) {
     case 'URL':
-      return extractVariableIndices(button.url).length > 0;
+      return extractVariables(button.url).length > 0;
     case 'COPY_CODE':
       // We always emit a button param for COPY_CODE so the customer
       // gets a real code (either the caller's override or the

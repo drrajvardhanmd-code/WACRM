@@ -42,7 +42,7 @@ import type {
 } from '@/types';
 import { templateStatusConfig } from '@/lib/template-status';
 import {
-  extractVariableIndices,
+  extractVariables,
   TEMPLATE_LIMITS,
 } from '@/lib/whatsapp/template-validators';
 
@@ -138,20 +138,20 @@ export function TemplateManager() {
   const [templateToDelete, setTemplateToDelete] =
     useState<MessageTemplate | null>(null);
 
-  // Body variable indices — `[1, 2, 3]` for "{{1}} {{2}} {{3}}". We
-  // re-run the extractor on every render to keep the sample-value rows
-  // in sync with what the user typed.
-  const bodyVarCount = useMemo(
-    () => extractVariableIndices(form.body_text).length,
+  const bodyVars = useMemo(
+    () => extractVariables(form.body_text),
     [form.body_text],
   );
-  const headerVarCount = useMemo(
+  const bodyVarCount = bodyVars.length;
+
+  const headerVars = useMemo(
     () =>
       form.header_format === 'text'
-        ? extractVariableIndices(form.header_content).length
-        : 0,
+        ? extractVariables(form.header_content)
+        : [],
     [form.header_format, form.header_content],
   );
+  const headerVarCount = headerVars.length;
 
   // Resize body_samples so it always has exactly bodyVarCount entries.
   // (We mutate via setForm in an effect so React owns the state.)
@@ -763,8 +763,8 @@ export function TemplateManager() {
                   {headerVarCount > 0 && (
                     <Input
                       id="template-header-sample"
-                      aria-label="Sample value for header variable"
-                      placeholder="Sample value for {{1}} (required for Meta review)"
+                      aria-label={`Sample value for header variable {{${headerVars[0]}}}`}
+                      placeholder={`Sample value for {{${headerVars[0]}}} (required for Meta review)`}
                       value={form.header_sample}
                       onChange={(e) =>
                         setForm({ ...form, header_sample: e.target.value })
@@ -813,8 +813,7 @@ export function TemplateManager() {
                 className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 resize-none"
               />
               <p className="text-[11px] text-slate-500">
-                Use {`{{1}}`}, {`{{2}}`} for variables (must be contiguous
-                starting at {`{{1}}`}).
+                Use {`{{var_name}}`} for variables.
               </p>
 
               {bodyVarCount > 0 && (
@@ -828,8 +827,8 @@ export function TemplateManager() {
                       <Input
                         key={i}
                         id={inputId}
-                        aria-label={`Sample value for body variable {{${i + 1}}}`}
-                        placeholder={`Sample for {{${i + 1}}}`}
+                        aria-label={`Sample value for body variable {{${bodyVars[i]}}}`}
+                        placeholder={`Sample for {{${bodyVars[i]}}}`}
                         value={val}
                         onChange={(e) => {
                           const next = [...form.body_samples];
@@ -954,7 +953,7 @@ export function TemplateManager() {
                             }
                             className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 h-8 text-xs"
                           />
-                          {extractVariableIndices(btn.url).length > 0 && (
+                          {extractVariables(btn.url).length > 0 && (
                             <Input
                               placeholder="Example value for {{1}} (required when URL has a variable)"
                               value={btn.example ?? ''}
