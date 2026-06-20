@@ -62,6 +62,14 @@ export function validateTemplateName(name: string): void {
  * `[1, 2, 4]` for `"Hi {{1}} {{2}}, item {{4}}"`.
  */
 export function extractVariableIndices(text: string): number[] {
+  const invalidMatches = [...text.matchAll(/\{\{([^}\d]+)\}\}/g)];
+  if (invalidMatches.length > 0) {
+    const invalidVars = invalidMatches.map((m) => `{{${m[1]}}}`).join(', ');
+    throw new Error(
+      `Invalid variable format found: ${invalidVars}. Meta WhatsApp API strictly requires numeric variables like {{1}}, {{2}}, etc.`,
+    );
+  }
+
   const matches = text.matchAll(/\{\{(\d+)\}\}/g);
   const set = new Set<number>();
   for (const m of matches) {
